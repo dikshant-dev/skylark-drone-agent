@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Skylark Drones – Operations AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #0b0e14;
+    --panel:    #11151f;
+    --border:   #1e2840;
+    --accent:   #00d4ff;
+    --accent2:  #ff6b35;
+    --green:    #00ff88;
+    --yellow:   #ffcc00;
+    --red:      #ff3b5c;
+    --text:     #c9d4e8;
+    --muted:    #4a5878;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-head: 'Barlow Condensed', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+  overflow: hidden;
+}
+
+  /* ── SCANLINE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,212,255,.015) 2px,
+      rgba(0,212,255,.015) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── TOP NAV ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    position: relative;
+  }
+
+  .logo-icon svg { width: 100%; height: 100%; }
+
+  .logo-text {
+    font-family: var(--font-head);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+    text-transform: uppercase;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .tagline {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-left: 4px;
+  }
+
+  .status-bar {
+    margin-left: auto;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .stat-pill .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  .dot.green  { background: var(--green); }
+  .dot.yellow { background: var(--yellow); }
+  .dot.red    { background: var(--red); }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: .3; }
+  }
+
+  /* ── MAIN LAYOUT ── */
+ .chat-wrapper {
+  background: var(--panel);  /* ⭐ restores contrast */
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+
+  height: calc(100vh - 61px);
+  overflow: hidden;
+
+  min-height: 0;          /* ⭐ allows inner scrolling */
+  background: var(--bg);  /* ⭐ prevents white area */
+}
+
+
+  /* ── SIDEBAR ── */
+ aside {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 20px;
+ min-height: 0;
+
+  height: calc(100vh - 61px);  /* ⭐ FULL HEIGHT BELOW HEADER */
+  overflow-y: auto;            /* ⭐ SIDEBAR SCROLL ENABLED */
+}
+  .panel-title {
+    font-family: var(--font-head);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* Dashboard cards */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .dash-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 8px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dash-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .dash-card.blue::before  { background: var(--accent); }
+  .dash-card.orange::before{ background: var(--accent2); }
+  .dash-card.green::before { background: var(--green); }
+  .dash-card.red::before   { background: var(--red); }
+
+  .dash-card .num {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .dash-card .label {
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Quick commands */
+  .quick-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 8px 10px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+
+  .quick-btn:hover {
+    background: var(--border);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .quick-btn .icon { font-size: 14px; }
+
+  /* ── CHAT AREA ── */
+ .chat-wrapper {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;   /* ⭐ IMPORTANT */
+}
+
+
+  .chat-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bot-avatar {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), #0066cc);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .bot-info .name {
+    font-family: var(--font-head);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .bot-info .sub {
+    font-size: 10px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+  }
+
+#messages {
+  flex: 1;
+  overflow-y: auto;   /* ⭐ ONLY THIS SHOULD SCROLL */
+  min-height: 0;
+color: var(--text);
+}
+
+
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-track { background: transparent; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg {
+    display: flex;
+    gap: 10px;
+    animation: fadeUp .3s ease;
+    max-width: 85%;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .msg-avatar {
+    width: 28px; height: 28px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font-head);
+    margin-top: 2px;
+  }
+
+  .msg.bot  .msg-avatar { background: linear-gradient(135deg, var(--accent), #0066cc); }
+  .msg.user .msg-avatar { background: linear-gradient(135deg, var(--accent2), #cc3300); }
+
+  .bubble {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .msg.user .bubble {
+    background: #131e35;
+    border-color: #1e3060;
+    color: #d0ddff;
+  }
+
+  /* Alert styling inside bubbles */
+  .bubble .alert-critical {
+    color: var(--red);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .bubble .alert-warn {
+    color: var(--yellow);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .bubble .alert-ok {
+    color: var(--green);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  /* Conflict alert box */
+  .conflict-box {
+    background: rgba(255,59,92,.07);
+    border: 1px solid rgba(255,59,92,.3);
+    border-left: 3px solid var(--red);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #ffb3c0;
+    white-space: pre-wrap;
+  }
+
+  .warn-box {
+    background: rgba(255,204,0,.07);
+    border: 1px solid rgba(255,204,0,.3);
+    border-left: 3px solid var(--yellow);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #ffe680;
+    white-space: pre-wrap;
+  }
+
+  .ok-box {
+    background: rgba(0,255,136,.07);
+    border: 1px solid rgba(0,255,136,.3);
+    border-left: 3px solid var(--green);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #80ffc4;
+  }
+
+  /* Typing indicator */
+  .typing .bubble {
+    padding: 14px 18px;
+  }
+
+  .dots {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .dots span {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: bounce .9s infinite;
+  }
+
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+
+  @keyframes bounce {
+    0%,80%,100% { transform: translateY(0); }
+    40%         { transform: translateY(-6px); }
+  }
+
+  /* ── INPUT BAR ── */
+  .input-bar {
+    border-top: 1px solid var(--border);
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    background: var(--panel);
+  }
+
+  #user-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    resize: none;
+    max-height: 120px;
+    line-height: 1.5;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  #user-input:focus { border-color: var(--accent); }
+  #user-input::placeholder { color: var(--muted); }
+
+  #send-btn {
+    background: var(--accent);
+    border: none;
+    color: #000;
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 10px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all .2s;
+    white-space: nowrap;
+    height: 42px;
+  }
+
+  #send-btn:hover { background: #33ddff; transform: translateY(-1px); }
+  #send-btn:active { transform: translateY(0); }
+  #send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+  /* Hint text */
+  .input-hints {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    padding: 4px 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="4" fill="#00d4ff"/>
+        <line x1="18" y1="6"  x2="6"  y2="18" stroke="#00d4ff" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="18" y1="6"  x2="30" y2="18" stroke="#00d4ff" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="18" y1="30" x2="6"  y2="18" stroke="#00d4ff" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="18" y1="30" x2="30" y2="18" stroke="#00d4ff" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="6"  cy="18" r="3" fill="#ff6b35"/>
+        <circle cx="30" cy="18" r="3" fill="#ff6b35"/>
+        <circle cx="18" cy="6"  r="3" fill="#ff6b35"/>
+        <circle cx="18" cy="30" r="3" fill="#ff6b35"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">SKYLARK <span>DRONES</span></div>
+      <div class="tagline">OPS COORDINATION SYSTEM v2.0</div>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="stat-pill"><div class="dot green"></div><span id="hdr-pilots">— PILOTS</span></div>
+    <div class="stat-pill"><div class="dot yellow"></div><span id="hdr-drones">— DRONES</span></div>
+    <div class="stat-pill"><div class="dot red"></div><span id="hdr-missions">— MISSIONS</span></div>
+  </div>
+</header>
+
+<!-- ── MAIN ── -->
+<main>
+  <!-- SIDEBAR -->
+  <aside>
+    <div>
+      <div class="panel-title">Fleet Status</div>
+      <div class="dash-grid">
+        <div class="dash-card blue">
+          <div class="num" id="dash-avail-pilots">–</div>
+          <div class="label">Available Pilots</div>
+        </div>
+        <div class="dash-card orange">
+          <div class="num" id="dash-leave">–</div>
+          <div class="label">On Leave</div>
+        </div>
+        <div class="dash-card green">
+          <div class="num" id="dash-avail-drones">–</div>
+          <div class="label">Ready Drones</div>
+        </div>
+        <div class="dash-card red">
+          <div class="num" id="dash-maint">–</div>
+          <div class="label">In Maintenance</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-title">Quick Commands</div>
+      <button class="quick-btn" onclick="quickSend('Show me all available pilots')"><span class="icon">👤</span>Available Pilots</button>
+      <button class="quick-btn" onclick="quickSend('Show all available drones')"><span class="icon">🚁</span>Available Drones</button>
+      <button class="quick-btn" onclick="quickSend('Show all active missions')"><span class="icon">📋</span>Active Missions</button>
+      <button class="quick-btn" onclick="quickSend('Check conflicts for PRJ001')"><span class="icon">⚠</span>Conflicts: PRJ001</button>
+      <button class="quick-btn" onclick="quickSend('Suggest best assignment for PRJ002')"><span class="icon">🎯</span>Suggest: PRJ002</button>
+      <button class="quick-btn" onclick="quickSend('Suggest best assignment for PRJ003')"><span class="icon">🎯</span>Suggest: PRJ003</button>
+      <button class="quick-btn" onclick="quickSend('Arjun is sick, urgent reassign his mission')"><span class="icon">🚨</span>Urgent Reassign</button>
+      <button class="quick-btn" onclick="quickSend('Mark Sneha as Available')"><span class="icon">✅</span>Update: Sneha Available</button>
+      <button class="quick-btn" onclick="quickSend('Calculate cost for Arjun on PRJ001')"><span class="icon">💰</span>Cost Calculator</button>
+    </div>
+
+    <div>
+      <div class="panel-title">System</div>
+      <div style="font-family: var(--font-mono); font-size: 10px; color: var(--muted); line-height: 1.8;">
+        <div>PILOTS DB: <span style="color:var(--green)">LOADED</span></div>
+        <div>DRONES DB: <span style="color:var(--green)">LOADED</span></div>
+        <div>MISSIONS DB: <span style="color:var(--green)">LOADED</span></div>
+        <div>SHEETS SYNC: <span style="color:var(--yellow)" id="sheets-status">PENDING</span></div>
+        <div>AI ENGINE: <span style="color:var(--green)">ONLINE</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CHAT -->
+  <div class="chat-wrapper">
+    <div class="chat-header">
+      <div class="bot-avatar">🤖</div>
+      <div class="bot-info">
+        <div class="name">SkyBot — Operations AI</div>
+        <div class="sub">Conflict Detection • Assignment Matching • Fleet Management</div>
+      </div>
+    </div>
+
+    <div id="messages">
+      <!-- Welcome message injected by JS -->
+    </div>
+
+    <div class="input-hints">↵ Enter to send &nbsp;|&nbsp; Shift+↵ for new line</div>
+    <div class="input-bar">
+      <textarea id="user-input" rows="1" placeholder="Ask SkyBot… e.g. 'Check conflicts for PRJ001' or 'Who can fly in rainy weather?'"></textarea>
+      <button id="send-btn" onclick="sendMessage()">SEND →</button>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const messagesEl = document.getElementById('messages');
+const inputEl    = document.getElementById('user-input');
+const sendBtn    = document.getElementById('send-btn');
+
+function scrollBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function formatBubble(text) {
+  // Detect and stylize alert sections
+  let html = '';
+  const lines = text.split('\n');
+  let inConflict = false, inWarn = false, inOk = false;
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('🔴') || trimmed.includes('CRITICAL')) {
+      if (inConflict) html += '</div>';
+      html += `<div class="conflict-box">`;
+      html += escHtml(line) + '\n';
+      inConflict = true; inWarn = false; inOk = false;
+    } else if (trimmed.startsWith('🟡') || trimmed.includes('WARNING')) {
+      if (inConflict) { html += '</div>'; inConflict = false; }
+      if (!inWarn) { html += `<div class="warn-box">`; inWarn = true; }
+      html += escHtml(line) + '\n';
+    } else if (trimmed.startsWith('✅')) {
+      if (inConflict || inWarn) { html += '</div>'; inConflict = false; inWarn = false; }
+      html += `<div class="ok-box">` + escHtml(line) + `</div>`;
+      inOk = false;
+    } else if (trimmed.startsWith('⚠')) {
+      if (!inConflict && !inWarn) {
+        if (inOk) { html += '</div>'; inOk = false; }
+        html += `<div class="conflict-box">`;
+        inConflict = true;
+      }
+      html += escHtml(line) + '\n';
+    } else {
+      if (inConflict) { html += '</div>'; inConflict = false; }
+      if (inWarn)     { html += '</div>'; inWarn     = false; }
+      if (inOk)       { html += '</div>'; inOk       = false; }
+      // Bold **text**
+      const formatted = escHtml(line).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html += formatted + '\n';
+    }
+  });
+
+  if (inConflict || inWarn || inOk) html += '</div>';
+  return html;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function addMsg(role, text) {
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = role === 'bot' ? '🤖' : 'U';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  if (role === 'bot') {
+    bubble.innerHTML = formatBubble(text);
+  } else {
+    bubble.textContent = text;
+  }
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  messagesEl.appendChild(div);
+  scrollBottom();
+  return div;
+}
+
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg bot typing';
+  div.id = 'typing-indicator';
+  div.innerHTML = `
+    <div class="msg-avatar">🤖</div>
+    <div class="bubble"><div class="dots"><span></span><span></span><span></span></div></div>`;
+  messagesEl.appendChild(div);
+  scrollBottom();
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const res  = await fetch('/dashboard');
+    const data = await res.json();
+    document.getElementById('dash-avail-pilots').textContent = data.available_pilots ?? '–';
+    document.getElementById('dash-leave').textContent        = data.on_leave ?? '–';
+    document.getElementById('dash-avail-drones').textContent = data.available_drones ?? '–';
+    document.getElementById('dash-maint').textContent        = data.in_maintenance ?? '–';
+    document.getElementById('hdr-pilots').textContent        = `${data.total_pilots} PILOTS`;
+    document.getElementById('hdr-drones').textContent        = `${data.total_drones} DRONES`;
+    document.getElementById('hdr-missions').textContent      = `${data.total_missions} MISSIONS`;
+  } catch(e) { console.warn('Dashboard load failed', e); }
+}
+
+// ── Send message ─────────────────────────────────────────────────────────────
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  addMsg('user', text);
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+  addTyping();
+
+  try {
+    const res  = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    });
+    const data = await res.json();
+    removeTyping();
+    addMsg('bot', data.reply || '⚠ No response from server.');
+    loadDashboard(); // Refresh stats after each message
+  } catch(e) {
+    removeTyping();
+    addMsg('bot', '⚠ Connection error. Is the Flask server running?');
+  } finally {
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+function quickSend(text) {
+  inputEl.value = text;
+  sendMessage();
+}
+
+// ── Auto-resize textarea ──────────────────────────────────────────────────────
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+});
+
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadDashboard();
+
+setTimeout(() => {
+  addMsg('bot', `Welcome to Skylark Drones Operations Control 🚁
+
+I'm SkyBot, your AI Operations Coordinator. I can help you with:
+
+👤 Pilot Roster — availability, skills, certifications
+🚁 Drone Fleet — status, capabilities, weather ratings
+📋 Mission Management — assignments, conflicts, costs
+⚠ Conflict Detection — double-bookings, cert mismatches, budget overruns
+🚨 Urgent Reassignments — emergency coverage when plans change
+
+Try one of the quick commands on the left, or just ask me anything!
+
+Example: "Check conflicts for PRJ001" or "Suggest best pilot for PRJ002"`);
+}, 300);
+</script>
+</body>
+</html>
