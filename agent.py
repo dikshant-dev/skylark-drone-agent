@@ -22,17 +22,12 @@ You have access to pilot roster, drone fleet, and mission list data.
 Be clear, concise, and professional. Use emoji warnings for alerts.
 Current date: """ + datetime.now().strftime("%Y-%m-%d") + """
 """
+
 class DroneAgent:
     def __init__(self):
         self.pilots, self.drones, self.missions = load_data()
         self.conversation_history = []
         self._try_sync_sheets()
-
-    # ⭐⭐⭐ ADD THIS FUNCTION RIGHT HERE ⭐⭐⭐
-    def refresh_data(self):
-        self.pilots, self.drones, self.missions = load_data()
-        self._try_sync_sheets()
-
 
     def _try_sync_sheets(self):
         try:
