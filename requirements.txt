@@ -1,5 +1,5 @@
-Flask
-pandas==2.1.4
+flask
+pandas
 groq
 python-dotenv
 gspread
